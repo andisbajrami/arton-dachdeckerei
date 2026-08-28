@@ -8,6 +8,8 @@ type Payload = {
   comment?: string;
 };
 
+const FALLBACK_ERROR_MSG = `Die Nachricht konnte nicht gesendet werden. Bitte rufen Sie uns unter ${SITE.phone} an oder schreiben Sie an ${SITE.email}.`;
+
 export async function POST(request: Request) {
   let body: Payload = {};
   try {
@@ -18,7 +20,7 @@ export async function POST(request: Request) {
 
   const name = (body.name || "").trim();
   const mail = (body.mail || "").trim();
-  const website = (body.website || "").trim();
+  const phone = (body.website || "").trim();
   const comment = (body.comment || "").trim();
 
   if (!name || !mail || !comment) {
@@ -35,38 +37,40 @@ export async function POST(request: Request) {
     );
   }
 
-  const form = new URLSearchParams({ name, mail, website, comment });
-  const endpoint = process.env.CONTACT_ENDPOINT || `${SITE.url}/contact.php`;
+  // All contact form submissions are delivered straight to the business
+  // inbox via FormSubmit's relay — no dependency on the old PHP host, which
+  // sits behind a bot-challenge that blocks server-to-server requests.
+  const recipient = process.env.CONTACT_RECIPIENT || SITE.email;
+  const referer = request.headers.get("origin") || SITE.url;
 
   try {
-    const res = await fetch(endpoint, {
+    const res = await fetch(`https://formsubmit.co/ajax/${recipient}`, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Referer: `${referer}/kontakt`,
+      },
+      body: JSON.stringify({
+        name,
+        email: mail,
+        phone: phone || "-",
+        message: comment,
+        _subject: `Neue Kontaktanfrage von ${name} – ${SITE.shortName}`,
+        _template: "table",
+      }),
     });
-    const text = await res.text();
-    try {
-      const json = JSON.parse(text);
-      if (json.info && json.msg) {
-        return NextResponse.json(json, { status: json.info === "error" ? 400 : 200 });
-      }
-    } catch {
-      if (res.ok) {
-        return NextResponse.json({
-          info: "success",
-          msg: "Vielen Dank. Ihre Nachricht wurde gesendet.",
-        });
-      }
+
+    const json = await res.json().catch(() => null);
+    if (res.ok && json && String(json.success) !== "false") {
+      return NextResponse.json({
+        info: "success",
+        msg: "Vielen Dank. Ihre Nachricht wurde gesendet.",
+      });
     }
   } catch {
-    // fall through
+    // fall through to error response below
   }
 
-  return NextResponse.json(
-    {
-      info: "error",
-      msg: `Die Nachricht konnte nicht gesendet werden. Bitte rufen Sie uns unter ${SITE.phone} an oder schreiben Sie an ${SITE.email}.`,
-    },
-    { status: 502 },
-  );
+  return NextResponse.json({ info: "error", msg: FALLBACK_ERROR_MSG }, { status: 502 });
 }

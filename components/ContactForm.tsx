@@ -32,10 +32,16 @@ export function ContactForm() {
     setPending(true);
     setStatus({ type: "idle" });
     try {
-      const res = await fetch("/api/contact", {
+      const endpoint = process.env.NEXT_PUBLIC_CONTACT_ENDPOINT || "/api/contact";
+      const isPhpEndpoint = endpoint.endsWith(".php");
+      const res = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, mail, website, comment }),
+        headers: {
+          "Content-Type": isPhpEndpoint ? "application/x-www-form-urlencoded" : "application/json",
+        },
+        body: isPhpEndpoint
+          ? new URLSearchParams({ name, mail, website, comment }).toString()
+          : JSON.stringify({ name, mail, website, comment }),
       });
       const json = await res.json();
       if (json.info === "error") {

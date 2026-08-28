@@ -1,7 +1,7 @@
 RewriteEngine On
 RewriteRule ^index\.html$ / [R=301,L]
-RewriteRule ^uberuns\.html$ /uber-uns [R=301,L]
-RewriteRule ^dienstleistungen\.html$ /dienstleistungen [R=301,L]
-RewriteRule ^referenzen\.html$ /referenzen [R=301,L]
-RewriteRule ^kontakt\.html$ /kontakt [R=301,L]
-RewriteRule ^impressum\.html$ /impressum [R=301,L]
+RewriteRule ^uberuns\.html$ /uber-uns/ [R=301,L]
+RewriteRule ^dienstleistungen\.html$ /dienstleistungen/ [R=301,L]
+RewriteRule ^referenzen\.html$ /referenzen/ [R=301,L]
+RewriteRule ^kontakt\.html$ /kontakt/ [R=301,L]
+RewriteRule ^impressum\.html$ /impressum/ [R=301,L]
